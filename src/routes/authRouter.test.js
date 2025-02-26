@@ -3,12 +3,12 @@ const app = require('../service');
 const { Role, DB } = require('../database/database.js');
 
 async function createAdminUser() {
-  let user = { password: 'toomanysecrets', roles: [{ role: Role.Admin }] };
+  let user = { password: 'mysecrets', roles: [{ role: Role.Admin }] };
   user.name = randomName();
   user.email = user.name + '@admin.com';
 
   user = await DB.addUser(user);
-  return { ...user, password: 'toomanysecrets' };
+  return { ...user, password: 'mysecrets' };
 }
 
 if (process.env.VSCODE_INSPECTOR_OPTIONS) {
@@ -42,3 +42,14 @@ function randomName() {
 function expectValidJwt(potentialJwt) {
   expect(potentialJwt).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
 }
+
+test('login as admin', async () => {
+    const adminUser = await createAdminUser();
+    const loginRes = await request(app).put('/api/auth').send(adminUser);
+    expect(loginRes.status).toBe(200);
+    expectValidJwt(loginRes.body.token);
+    
+    const expectedUser = { ...adminUser, roles: [{ role: 'admin' }] };
+    delete expectedUser.password;
+    expect(loginRes.body.user).toMatchObject(expectedUser);
+});
